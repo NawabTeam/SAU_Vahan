@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth" >
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SAU_Vahan – Driver Portal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <style>
+    /* Toast notification */
+    .toast {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      background: #22c55e; /* Tailwind emerald-500 */
+      color: white;
+      padding: 14px 22px;
+      border-radius: 14px;
+      box-shadow: 0 6px 14px rgba(34, 197, 94, 0.7);
+      display: none;
+      z-index: 9999;
+      font-weight: 600;
+      letter-spacing: 0.03em;
+      font-family: 'Inter', sans-serif;
+      user-select: none;
+      animation: fadeinout 3s ease forwards;
+    }
+    @keyframes fadeinout {
+      0%   {opacity:0; transform: translateX(20px);}
+      10%, 90% {opacity:1; transform: translateX(0);}
+      100% {opacity:0; transform: translateX(20px);}
+    }
+
+    /* Sidebar gradient */
+    aside {
+      background: linear-gradient(180deg, #065f46, #065f46 60%, #134e4a);
+      min-height: 100vh;
+    }
+
+    /* Sidebar nav buttons */
+    aside nav button {
+      font-weight: 600;
+      transition: background-color 0.3s ease;
+    }
+    aside nav button:hover:not(.bg-green-700) {
+      background-color: #047857 !important; /* Tailwind green-700 hover */
+    }
+
+    /* Header bar */
+    header {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 56px;
+      background-color: #065f46;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 1.5rem;
+      z-index: 70;
+      box-shadow: 0 3px 8px rgb(4 78 48 / 0.8);
+      font-weight: 700;
+      font-family: 'Inter', sans-serif;
+      letter-spacing: 0.05em;
+    }
+    main {
+      padding-top: 4rem; /* Header height + some padding */
+    }
+
+    /* Driver Card */
+    #driverAvatar {
+      border-width: 3px !important;
+      transition: box-shadow 0.3s ease;
+    }
+    #driverAvatar:hover {
+      box-shadow: 0 0 20px #34d399; /* Tailwind emerald-400 glow */
+    }
+
+    /* Status buttons */
+    #statusButtons button {
+      font-weight: 700;
+      font-size: 1rem;
+      will-change: transform;
+      transition: background-color 0.3s ease, transform 0.15s ease;
+    }
+    #statusButtons button:hover {
+      transform: scale(1.05);
+      filter: drop-shadow(0 0 6px rgba(59, 130, 246, 0.5));
+    }
+
+    /* Seat management buttons scaling on click */
+    #seatPlus:active, #seatMinus:active {
+      transform: scale(0.9);
+      transition: transform 0.1s ease;
+    }
+
+    /* Ride Requests card */
+    #requests > div {
+      transition: box-shadow 0.25s ease;
+    }
+    #requests > div:hover {
+      box-shadow: 0 12px 25px -5px rgba(6, 95, 70, 0.35);
+      border-color: #059669;
+      background-color: #f0fdf4;
+    }
+
+    /* Offline Modal improvements */
+    .modal-mask {
+      backdrop-filter: blur(5px);
+    }
+    .modal {
+      border-radius: 20px;
+      box-shadow: 0 12px 25px rgba(6, 95, 70, 0.45);
+      letter-spacing: 0.03em;
+    }
+
+    /* Input focus style */
+    input[type="text"]:focus, input[type="text"].focus-visible {
+      outline: 2px solid #22c55e;
+      outline-offset: 2px;
+    }
+
+    /* Section titles */
+    main section h2 {
+      font-family: 'Inter', sans-serif;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: #064e3b;
+    }
+
+    /* Map containers with subtle shadow & rounded corners */
+    #map, #miniMap {
+      border-radius: 1rem;
+      box-shadow: 0 4px 20px rgba(6,95,70,0.3);
+    }
+
+    /* Notifications panel */
+    #notifPanel {
+      max-height: 12rem;
+      overflow-y: auto;
+      padding-right: 8px;
+      scrollbar-width: thin;
+      scrollbar-color: #34d399 #14432f; /* emerald thumb & track */
+    }
+    #notifPanel::-webkit-scrollbar {
+      width: 8px;
+    }
+    #notifPanel::-webkit-scrollbar-track {
+      background: #14432f;
+      border-radius: 10px;
+    }
+    #notifPanel::-webkit-scrollbar-thumb {
+      background-color: #34d399;
+      border-radius: 10px;
+    }
+
+    /* Floating End Trip button improvements */
+    #endTripBtn i {
+      height: 20px;
+      width: 20px;
+    }
+    #endTripBtn:hover {
+      background-color: #dc2626;
+      box-shadow: 0 8px 30px -5px rgba(220, 38, 38, 0.7);
+      transform: scale(1.05);
+      transition: all 0.3s ease;
+    }
+    
+    /* Badge improvements */
+    #badges span {
+      font-weight: 700;
+      font-size: 0.9rem;
+      background-color: #d1fae5; /* emerald-100 bg */
+      border-color: #10b981; /* emerald-500 */
+      color: #065f46;
+      box-shadow: 0 3px 6px rgb(16 185 129 / 0.4);
+      user-select: none;
+      cursor: default;
+      transition: background-color 0.25s ease;
+    }
+    #badges span:hover {
+      background-color: #10b981;
+      color: white;
+      box-shadow: 0 6px 18px rgb(16 185 129 / 0.7);
+    }
+    
+    /* Responsive improvements */
+    @media (max-width: 768px) {
+      aside {
+        width: 16rem;
+        padding: 1rem 1.5rem;
+      }
+      main {
+        padding-left: 1rem;
+        padding-right: 1rem;
+      }
+    }
+  </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 font-sans transition-colors selection:bg-emerald-400 selection:text-black">
+
+  <!-- Header -->
+  <header class="select-none">
+    <div class="flex items-center space-x-2">
+      <i data-lucide="car-front" class="inline-block w-6 h-6 text-emerald-400"></i>
+      <h1 class="text-xl font-extrabold tracking-widest uppercase text-emerald-300">SAU_Vahan Driver Portal</h1>
+    </div>
+    <button id="darkModeToggle" aria-label="Toggle theme" title="Toggle Dark/Light Mode" class="p-2 rounded hover:bg-emerald-600">
+      <i data-lucide="moon" class="w-6 h-6"></i>
+    </button>
+  </header>
+
+  <!-- Layout -->
+  <div class="flex h-screen pt-14">
+
+    <!-- Sidebar -->
+    <aside class="w-64 p-6 space-y-6 shadow-xl flex flex-col text-white">
+      
+      <nav class="flex flex-col space-y-3">
+        <button class="flex items-center space-x-2 px-3 py-3 rounded bg-emerald-600 hover:bg-emerald-700 transition-shadow shadow-md">
+          <i data-lucide="layout-dashboard" class="w-5 h-5"></i><span class="uppercase tracking-wide font-semibold">Dashboard</span>
+        </button>
+        <button class="flex items-center space-x-2 px-3 py-3 rounded hover:bg-emerald-800 transition hover:shadow-lg">
+          <i data-lucide="map" class="w-5 h-5"></i><span class="uppercase tracking-wide font-semibold">Live Map</span>
+        </button>
+        <button class="flex items-center space-x-2 px-3 py-3 rounded hover:bg-emerald-800 transition hover:shadow-lg">
+          <i data-lucide="history" class="w-5 h-5"></i><span class="uppercase tracking-wide font-semibold">Trip History</span>
+        </button>
+        <button class="flex items-center space-x-2 px-3 py-3 rounded hover:bg-emerald-800 transition hover:shadow-lg">
+          <i data-lucide="log-out" class="w-5 h-5"></i><span class="uppercase tracking-wide font-semibold">Logout</span>
+        </button>
+      </nav>
+
+      <div class="mt-auto">
+        <h4 class="text-sm uppercase tracking-widest text-emerald-300 mb-2 font-semibold">Notifications</h4>
+        <div id="notifPanel" class="space-y-2 bg-emerald-900/50 rounded-xl p-2 max-h-48 overflow-auto text-sm"></div>
+      </div>
+    </aside>
+
+    <!-- Main Dashboard -->
+    <main class="flex-1 p-8 space-y-10 overflow-y-auto">
+      
+      <!-- Driver Card -->
+      <section class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg flex justify-between items-center gap-6">
+        <div class="flex items-center space-x-5">
+          <label for="avatarUpload" class="cursor-pointer hover:brightness-110 transition">
+            <img id="driverAvatar" src="https://via.placeholder.com/60" alt="Driver avatar" class="w-20 h-20 rounded-full border-4 border-emerald-500 object-cover" />
+            <input type="file" id="avatarUpload" class="hidden" accept="image/*" />
+          </label>
+          <div>
+            <h2 id="driverNameDisplay" class="text-2xl font-extrabold dark:text-emerald-400 tracking-wide select-text">Driver</h2>
+            <p id="welcomeMessage" class="text-md text-gray-600 dark:text-gray-300">Hi 👋, welcome!</p>
+            <p id="statusDisplay" class="text-gray-600 dark:text-gray-400 flex items-center space-x-3 mt-1 font-semibold">
+              <span class="w-3 h-3 rounded-full bg-red-500 inline-block"></span>
+              <span>Not logged in</span>
+            </p>
+          </div>
+        </div>
+        <div class="flex items-center space-x-3">
+          <input id="driverName" type="text" placeholder="Enter your name" class="border border-gray-300 rounded-md p-3 w-56 focus:ring-2 focus:ring-emerald-400 focus:outline-none dark:bg-gray-700 dark:text-white" />
+          <button id="loginBtn" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-3 font-semibold rounded-xl shadow-lg transition hover:shadow-indigo-300 disabled:opacity-70">Login</button>
+        </div>
+      </section>
+
+      <!-- Quote + Badges -->
+      <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-6 text-center flex flex-col justify-center">
+          <p class="text-gray-400 dark:text-gray-300 tracking-tight font-semibold uppercase mb-1">Quote of the Day</p>
+          <h3 id="quote" class="text-2xl font-semibold leading-relaxed text-emerald-600 dark:text-emerald-400">🚦 Safe driving keeps you & students safe</h3>
+        </div>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-6 text-center flex flex-col items-center justify-center">
+          <p class="text-gray-400 dark:text-gray-300 uppercase tracking-tight font-semibold mb-2">Achievements</p>
+          <div class="flex items-center justify-center flex-wrap gap-2" id="badges" aria-label="Driver achievements"></div>
+        </div>
+      </section>
+
+      <!-- Status Buttons -->
+      <div id="statusButtons" class="hidden flex gap-4 justify-center md:justify-start">
+        <button id="availableBtn" class="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-3 rounded-lg shadow-md flex items-center gap-2 tracking-wide font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-400 transition">
+          <i data-lucide="check" class="w-5 h-5"></i> Available
+        </button>
+        <button id="breakBtn" class="bg-yellow-400 hover:bg-yellow-500 text-white px-5 py-3 rounded-lg shadow-md flex items-center gap-2 tracking-wide font-semibold focus:outline-none focus:ring-2 focus:ring-yellow-300 transition">
+          <i data-lucide="coffee" class="w-5 h-5"></i> Break
+        </button>
+        <button id="offlineBtn" class="bg-gray-700 hover:bg-gray-800 text-white px-5 py-3 rounded-lg shadow-md flex items-center gap-2 tracking-wide font-semibold focus:outline-none focus:ring-2 focus:ring-gray-500 transition">
+          <i data-lucide="power" class="w-5 h-5"></i> Offline
+        </button>
+      </div>
+
+      <!-- Work Times section -->
+      <section id="workTimesSection" class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg">
+        <h2 class="text-lg font-extrabold mb-4 flex items-center gap-3 text-emerald-600 dark:text-emerald-400 drop-shadow-md">
+          <i data-lucide="timer" class="w-6 h-6"></i> Work Time
+        </h2>
+        <ul id="workTimesList" class="text-gray-700 dark:text-gray-300 text-base space-y-2 leading-relaxed select-text"></ul>
+      </section>
+
+      <!-- Dashboard Cards -->
+      <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md flex flex-col items-center gap-2">
+          <p class="text-gray-400 dark:text-gray-500 uppercase font-semibold tracking-widest text-sm select-none">Total Trips</p>
+          <h3 id="totalTrips" class="text-4xl font-extrabold dark:text-emerald-400">0</h3>
+        </div>
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md flex flex-col items-center gap-2">
+          <p class="text-gray-400 dark:text-gray-500 uppercase font-semibold tracking-widest text-sm select-none">Active Rides</p>
+          <h3 id="activeRides" class="text-4xl font-extrabold dark:text-emerald-400">0</h3>
+        </div>
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md flex flex-col items-center gap-2">
+          <p class="text-gray-400 dark:text-gray-500 uppercase font-semibold tracking-widest text-sm select-none">Status</p>
+          <h3 id="statusCard" class="text-4xl font-extrabold dark:text-emerald-400">Offline</h3>
+        </div>
+      </section>
+
+      <!-- Seats Management -->
+      <section class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg">
+        <h2 class="text-xl font-extrabold flex items-center gap-3 mb-6 text-emerald-600 dark:text-emerald-400 tracking-wide">
+          <i data-lucide="users" class="w-6 h-6"></i> Seats Management
+        </h2>
+        <div class="flex items-center justify-center gap-6">
+          <button id="seatMinus" aria-label="Decrease seats" class="bg-red-600 hover:bg-red-700 active:scale-95 text-white px-6 py-3 rounded-xl shadow-lg text-xl">
+            −
+          </button>
+          <p id="seatCount" class="text-2xl font-extrabold text-gray-900 dark:text-gray-200 select-text">4</p>
+          <button id="seatPlus" aria-label="Increase seats" class="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white px-6 py-3 rounded-xl shadow-lg text-xl">
+            +
+          </button>
+        </div>
+        <p class="text-xs text-gray-400 mt-2 text-center">Max 5 students per ride</p>
+      </section>
+
+      <!-- Mini Map Widget -->
+      <section class="bg-white dark:bg-gray-800 p-5 rounded-xl shadow-lg">
+        <div class="flex items-center gap-3 mb-3 text-emerald-600 dark:text-emerald-400 font-extrabold tracking-wide">
+          <i data-lucide="map-pin" class="w-5 h-5"></i>
+          <h2 class="text-lg">Mini Map</h2>
+        </div>
+        <div id="miniMap" class="w-full h-48 rounded-xl border border-gray-200 dark:border-gray-700 shadow-inner"></div>
+      </section>
+
+      <!-- Live Map -->
+      <section class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-xl">
+        <div class="flex items-center gap-3 mb-4 text-emerald-600 dark:text-emerald-400 font-extrabold tracking-wide">
+          <i data-lucide="map" class="w-6 h-6"></i>
+          <h2 class="text-xl">Live Location</h2>
+        </div>
+        <div id="map" class="w-full h-72 rounded-xl border border-gray-300 dark:border-gray-700 shadow-lg"></div>
+      </section>
+
+      <!-- Ride Requests -->
+      <section class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg">
+        <div class="flex items-center gap-3 mb-5 text-emerald-600 dark:text-emerald-400 font-extrabold tracking-wide">
+          <i data-lucide="bell-ring" class="w-6 h-6"></i>
+          <h2 class="text-xl">Incoming Ride Requests</h2>
+        </div>
+        <div id="requests" class="space-y-4"></div>
+      </section>
+
+      <!-- Ride Progress -->
+      <section class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md hidden" id="rideProgressSection">
+        <h2 class="text-lg font-extrabold mb-4 text-emerald-600 dark:text-emerald-400 tracking-wide">Ride Progress</h2>
+        <div class="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-4">
+          <div id="rideProgressBar" class="bg-emerald-600 h-4 rounded-full w-0 transition-all ease-in-out duration-500"></div>
+        </div>
+      </section>
+
+      <!-- Trip History -->
+      <section class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-lg">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-xl font-extrabold flex items-center gap-3 text-emerald-600 dark:text-emerald-400 tracking-wide">
+            <i data-lucide="history" class="w-6 h-6"></i> Trip History
+          </h2>
+
+          <div class="flex gap-3">
+            <button class="filterBtn bg-emerald-600 text-white px-4 py-2 rounded shadow hover:bg-emerald-700 transition" data-filter="today">Today</button>
+            <button class="filterBtn bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-4 py-2 rounded shadow hover:bg-gray-400 dark:hover:bg-gray-600 transition" data-filter="week">This Week</button>
+            <button class="filterBtn bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-4 py-2 rounded shadow hover:bg-gray-400 dark:hover:bg-gray-600 transition" data-filter="all">All Time</button>
+          </div>
+        </div>
+        <div id="routeStats" class="text-sm text-gray-500 dark:text-gray-400 mb-4 select-text"></div>
+        <div id="historyList" class="space-y-4"></div>
+      </section>
+
+      <!-- End Trip Floating Button -->
+      <div class="fixed bottom-6 right-6 z-50">
+        <button id="endTripBtn" class="hidden bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-full shadow-lg flex items-center space-x-2 tracking-wider font-extrabold transition-all focus:outline-none focus:ring-4 focus:ring-red-400 outline-offset-2">
+          <i data-lucide="flag" class="w-5 h-5"></i><span>End Trip</span>
+        </button>
+      </div>
+
+    </main>
+  </div>
+
+  <div id="toast" class="toast">New Ride Request 🚖</div>
+
+  <!-- Offline reason modal (improved with blur & spacing) -->
+  <div id="offlineModal" class="modal-mask flex items-center justify-center">
+    <div class="modal max-w-md w-11/12 p-6 dark:bg-gray-900 text-gray-900 dark:text-gray-200 shadow-lg">
+      <h3 class="text-xl font-extrabold mb-3 flex items-center gap-3 text-red-600 dark:text-red-400">
+        <i data-lucide="alert-octagon" class="w-6 h-6"></i> Go Offline
+      </h3>
+      <p class="text-sm mb-4 leading-relaxed">Select a reason for going offline:</p>
+      <div class="space-y-4">
+        <label class="flex items-center gap-3 cursor-pointer">
+          <input type="radio" name="offreason" value="Service over" class="reasonOpt" />
+          <span class="text-base select-none">Service over</span>
+        </label>
+        <label class="flex items-center gap-3 cursor-pointer">
+          <input type="radio" name="offreason" value="Lunch" class="reasonOpt" />
+          <span class="text-base select-none">Lunch</span>
+        </label>
+        <label class="flex items-center gap-3 cursor-pointer">
+          <input type="radio" name="offreason" value="Other" class="reasonOpt" />
+          <span class="text-base select-none">Other</span>
+        </label>
+        <input id="otherReason" type="text" placeholder="Write reason..." class="w-full border border-gray-300 rounded-md p-3 hidden focus:ring-2 focus:ring-red-400 focus:outline-none dark:bg-gray-700 dark:text-gray-200"/>
+      </div>
+      <div class="flex justify-end gap-3 mt-6">
+        <button id="cancelOffline" class="px-5 py-2 rounded-md border border-gray-400 hover:border-gray-600 transition focus:outline-none focus:ring-2 focus:ring-red-500">Cancel</button>
+        <button id="confirmOffline" class="px-5 py-2 rounded-md bg-red-600 hover:bg-red-700 text-white font-semibold focus:outline-none focus:ring-2 focus:ring-red-500 transition">Go Offline</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase + JS -->
+  <script type="module">
+    // Your entire existing JS code goes here exactly as before (no functional changes)
+    // Just make sure lucide icons get rendered after DOM changes
+    
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+    import { getDatabase, ref, onChildAdded, onValue, update, set, push } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
+
+    // ... (All your existing Firebase JS code)
+
+    // After all DOM changes:
+    lucide.createIcons();
+  </script>
+</body>
+</html>

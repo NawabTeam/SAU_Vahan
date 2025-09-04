@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SAU_Vahan – Admin Panel</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body class="bg-gray-100 font-sans">
+
+  <!-- Layout -->
+  <div class="flex h-screen">
+
+    <!-- Sidebar -->
+    <aside class="w-64 bg-gray-900 text-white flex flex-col p-4 space-y-6">
+      <h1 class="text-2xl font-bold flex items-center space-x-2">
+        <i data-lucide="shield"></i><span>Admin Panel</span>
+      </h1>
+      <nav class="flex flex-col space-y-3">
+        <button class="flex items-center space-x-2 hover:bg-gray-700 px-3 py-2 rounded">
+          <i data-lucide="users"></i><span>Drivers</span>
+        </button>
+        <button class="flex items-center space-x-2 hover:bg-gray-700 px-3 py-2 rounded">
+          <i data-lucide="book-open"></i><span>Ride Logs</span>
+        </button>
+        <button class="flex items-center space-x-2 hover:bg-gray-700 px-3 py-2 rounded">
+          <i data-lucide="map"></i><span>Live Tracking</span>
+        </button>
+        <button class="flex items-center space-x-2 hover:bg-gray-700 px-3 py-2 rounded">
+          <i data-lucide="settings"></i><span>Settings</span>
+        </button>
+        <button class="flex items-center space-x-2 hover:bg-gray-700 px-3 py-2 rounded">
+          <i data-lucide="log-out"></i><span>Logout</span>
+        </button>
+      </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 p-6 space-y-6 overflow-y-auto">
+
+      <!-- Dashboard Header -->
+      <section class="bg-white p-6 rounded-xl shadow flex items-center justify-between">
+        <h2 class="text-xl font-bold flex items-center space-x-2">
+          <i data-lucide="layout-dashboard"></i><span>Dashboard Overview</span>
+        </h2>
+        <p class="text-gray-500">Admin access • Manage system</p>
+      </section>
+
+      <!-- Stats -->
+      <section class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="bg-white p-6 rounded-xl shadow flex items-center space-x-4">
+          <i data-lucide="users" class="text-green-600 w-10 h-10"></i>
+          <div>
+            <h3 class="text-2xl font-bold" id="driverCount">0</h3>
+            <p class="text-gray-500">Active Drivers</p>
+          </div>
+        </div>
+        <div class="bg-white p-6 rounded-xl shadow flex items-center space-x-4">
+          <i data-lucide="car" class="text-blue-600 w-10 h-10"></i>
+          <div>
+            <h3 class="text-2xl font-bold" id="rideCount">0</h3>
+            <p class="text-gray-500">Total Rides</p>
+          </div>
+        </div>
+        <div class="bg-white p-6 rounded-xl shadow flex items-center space-x-4">
+          <i data-lucide="clock" class="text-yellow-600 w-10 h-10"></i>
+          <div>
+            <h3 class="text-2xl font-bold" id="pendingCount">0</h3>
+            <p class="text-gray-500">Pending Requests</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Live Drivers -->
+      <section class="bg-white p-6 rounded-xl shadow">
+        <h2 class="text-xl font-semibold flex items-center space-x-2 mb-4">
+          <i data-lucide="map-pin"></i><span>Live Drivers</span>
+        </h2>
+        <div id="driversList" class="space-y-2 text-gray-700">Loading...</div>
+      </section>
+
+      <!-- Ride History -->
+      <section class="bg-white p-6 rounded-xl shadow">
+        <h2 class="text-xl font-semibold flex items-center space-x-2 mb-4">
+          <i data-lucide="book"></i><span>Ride Logs</span>
+        </h2>
+        <div id="ridesList" class="space-y-2 text-gray-600">Loading...</div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Firebase Logic -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDy8XPh_hvFVLEWhWI1i---1q02vrdhGzA",
+      authDomain: "sau-vahan.firebaseapp.com",
+      databaseURL: "https://sau-vahan-default-rtdb.firebaseio.com",
+      projectId: "sau-vahan",
+      storageBucket: "sau-vahan.firebasestorage.app",
+      messagingSenderId: "130144606109",
+      appId: "1:130144606109:web:31a03191d481e3bc7c4174"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    const driverCount = document.getElementById("driverCount");
+    const rideCount = document.getElementById("rideCount");
+    const pendingCount = document.getElementById("pendingCount");
+    const driversList = document.getElementById("driversList");
+    const ridesList = document.getElementById("ridesList");
+
+    // Live Drivers
+    onValue(ref(db, "drivers"), (snapshot) => {
+      const data = snapshot.val() || {};
+      driversList.innerHTML = "";
+      let count = 0;
+      for (const key in data) {
+        count++;
+        const d = data[key];
+        const div = document.createElement("div");
+        div.className = "p-3 border rounded bg-gray-50 flex justify-between items-center";
+        div.innerHTML = `
+          <div>
+            <p><b>${d.name}</b> – ${d.status}</p>
+            <p class="text-xs text-gray-500">Lat: ${d.lat?.toFixed(4)}, Lng: ${d.lng?.toFixed(4)}</p>
+          </div>
+        `;
+        driversList.appendChild(div);
+      }
+      driverCount.innerText = count;
+    });
+
+    // Rides
+    onValue(ref(db, "rides"), (snapshot) => {
+      const data = snapshot.val() || {};
+      ridesList.innerHTML = "";
+      let total = 0, pending = 0;
+      for (const key in data) {
+        total++;
+        if (data[key].status === "pending") pending++;
+        const r = data[key];
+        const div = document.createElement("div");
+        div.className = "p-3 border rounded bg-gray-50";
+        div.innerHTML = `
+          <p><b>Student:</b> ${r.student}</p>
+          <p><b>Status:</b> ${r.status}</p>
+        `;
+        ridesList.appendChild(div);
+      }
+      rideCount.innerText = total;
+      pendingCount.innerText = pending;
+    });
+
+    // Load icons
+    lucide.createIcons();
+  </script>
+</body>
+</html>

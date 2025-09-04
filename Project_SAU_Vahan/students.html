@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SAU_Vahan – Student Portal</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://kit.fontawesome.com/a2e0e6ad5b.js" crossorigin="anonymous"></script>
+<style>
+  body { font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial; }
+  .map-container { height: 500px; border-radius: 1rem; overflow: hidden; }
+  .fade-in { animation: fadeIn .5s ease-in-out; }
+  @keyframes fadeIn { from {opacity:0; transform: translateY(6px)} to {opacity:1; transform: translateY(0)} }
+  .notif-enter { animation: notifIn .5s ease; }
+  @keyframes notifIn { from {opacity:0; transform: translateY(-6px)} to {opacity:1; transform: translateY(0)} }
+</style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+<header class="bg-white shadow sticky top-0 z-50">
+  <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+    <div class="flex items-center gap-3">
+      <div class="bg-green-600 text-white px-3 py-2 rounded-full">🚖</div>
+      <div>
+        <h1 class="text-lg font-bold text-green-700">SAU_Vahan</h1>
+        <div class="text-xs text-gray-500">Smart campus rides — human first</div>
+      </div>
+    </div>
+    <nav class="hidden md:flex gap-6 text-sm">
+      <a href="#map" class="hover:text-green-600">Live Map</a>
+      <a href="#autos" class="hover:text-green-600">Available Autos</a>
+      <a href="#shuttle" class="hover:text-green-600">Shuttle Timings</a>
+    </nav>
+  </div>
+</header>
+
+<section class="bg-gradient-to-r from-green-500 to-blue-500 text-white py-16 px-6 text-center">
+  <h2 class="text-3xl md:text-4xl font-extrabold mb-3">Smarter rides for South Asian University</h2>
+  <p class="max-w-3xl mx-auto text-md md:text-lg text-green-50/90 mb-6">Skip the long walk — request an eco-rickshaw in seconds, track arrival live, and give feedback to improve service.</p>
+  <a href="#map" class="inline-block bg-white text-green-700 px-6 py-3 rounded-full shadow font-semibold hover:scale-105 transition">Request a Ride</a>
+</section>
+
+<main class="max-w-7xl mx-auto px-4 py-10 grid md:grid-cols-3 gap-6" id="map">
+
+  <!-- MAP + PICKUP/DROP -->
+  <div class="md:col-span-2">
+    <div class="map-container shadow" id="gmap"></div>
+    <div class="mt-4 flex gap-3">
+      <div class="bg-white rounded-lg shadow p-3 flex-1 flex items-center gap-3">
+        <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+          <i class="fas fa-map-marker-alt text-green-600"></i>
+        </div>
+        <div>
+          <div class="text-sm text-gray-500">Pickup</div>
+          <div id="pickupLabel" class="font-medium">Not set</div>
+        </div>
+      </div>
+      <div class="bg-white rounded-lg shadow p-3 flex-1 flex items-center gap-3">
+        <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+          <i class="fas fa-flag-checkered text-blue-600"></i>
+        </div>
+        <div>
+          <div class="text-sm text-gray-500">Destination</div>
+          <div id="dropLabel" class="font-medium">Not set</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SIDEBAR -->
+  <aside class="bg-white rounded-2xl shadow p-6 space-y-4 fade-in">
+    <h3 class="text-xl font-bold">🚕 Request a Ride</h3>
+    <label class="block">
+      <span class="text-sm text-gray-600">Your name</span>
+      <input id="userName" class="mt-2 w-full border rounded-lg px-3 py-2" placeholder="e.g., Aisha" />
+    </label>
+
+    <!-- Dropdowns -->
+    <label class="block">
+      <span class="text-sm text-gray-600">Pickup Location</span>
+      <select id="pickupSelect" class="mt-2 w-full border rounded-lg px-3 py-2">
+        <option value="">Select Pickup</option>
+        <option value="gate1">SAU Gate 1</option>
+        <option value="gate2">SAU Gate 2</option>
+        <option value="satbari">Satbari</option>
+      </select>
+    </label>
+
+    <label class="block">
+      <span class="text-sm text-gray-600">Destination</span>
+      <select id="dropSelect" class="mt-2 w-full border rounded-lg px-3 py-2">
+        <option value="">Select Destination</option>
+        <option value="gate1">SAU Gate 1</option>
+        <option value="gate2">SAU Gate 2</option>
+        <option value="satbari">Satbari</option>
+      </select>
+    </label>
+
+    <!-- Ride Buttons -->
+    <div class="flex gap-2 mt-2">
+      <button id="requestBtn" class="flex-1 bg-green-700 text-white py-2 rounded-lg font-semibold hover:bg-green-800">Request Ride</button>
+      <button id="clearBtn" class="bg-gray-100 px-4 rounded-lg">Clear</button>
+    </div>
+
+    <!-- Autos Section -->
+    <div id="autos" class="mt-4">
+      <div class="flex items-center justify-between">
+        <h4 class="font-semibold mb-2">Available Autos</h4>
+        <div id="counts" class="text-xs text-gray-500"></div>
+      </div>
+      <div id="autosList" class="space-y-3 text-sm"></div>
+    </div>
+
+    <div>
+      <h4 class="font-semibold mb-2">Notifications</h4>
+      <div id="notifications" class="space-y-2 max-h-40 overflow-auto"></div>
+    </div>
+
+    <div>
+      <h4 class="font-semibold mb-2">Active Rides</h4>
+      <div id="ridesList" class="text-sm text-gray-700"></div>
+    </div>
+  </aside>
+</main>
+
+<footer class="bg-gray-800 text-gray-200 py-6 mt-10">
+  <div class="max-w-6xl mx-auto text-center">
+    <p>© 2025 SAU_Vahan — Built with care for the campus community.</p>
+  </div>
+</footer>
+
+<!-- GOOGLE MAPS -->
+<script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAyqg2SpW_dtt_cq5OnyKFEr-6hwFLIvD8&callback=initMap"></script>
+
+<script>
+/* -------------------- MAP + LOCATIONS -------------------- */
+let map;
+let pickupMarker=null, dropMarker=null, routeLine=null;
+let tickHandle=null;          // movement interval
+let activeRide=null;          // enforce single active ride
+const rides=[];
+
+const LOCATIONS = {
+  gate1: {lat:28.4987, lng:77.1854, label:"SAU Gate 1"},
+  gate2: {lat:28.4996, lng:77.1862, label:"SAU Gate 2"},
+  satbari: {lat:28.4970, lng:77.1820, label:"Satbari"}
+};
+
+function initMap(){
+  map = new google.maps.Map(document.getElementById('gmap'), { center: LOCATIONS.gate1, zoom:16 });
+  // static POI markers
+  Object.values(LOCATIONS).forEach(loc=>{
+    new google.maps.Marker({ position: loc, map, title: loc.label });
+  });
+  renderAutos();         // add auto markers on map
+  startTicker();         // begin movement simulation
+}
+
+/* -------------------- AUTOS DATA -------------------- */
+const SPEED_MPS = 2.5;  // ~9 km/h
+const autos = [
+  {id:1, name:"Ravi Kumar", phone:"9876543210", autoNo:"DL3CAB1234", seats:3, status:"online",  location:{lat:28.4989,lng:77.1845}, marker:null, heading:"idle"},
+  {id:2, name:"Sita Devi",  phone:"9812345678", autoNo:"DL3CAB5678", seats:2, status:"online",  location:{lat:28.4978,lng:77.1832}, marker:null, heading:"idle"},
+  {id:3, name:"Arjun Singh",phone:"9991122334", autoNo:"DL3CAB4321", seats:3, status:"offline", location:{lat:28.4969,lng:77.1859}, marker:null, heading:"idle"},
+];
+
+function renderAutos(){
+  // list
+  const autos=[
+  {id:1, name:"Ravi Kumar", phone:"9876543210", autoNo:"DL3CAB1234", seats:3, status:"online", location:{lat:28.4989,lng:77.1845}},
+  {id:2, name:"Sita Devi", phone:"9812345678", autoNo:"DL3CAB5678", seats:2, status:"online", location:{lat:28.4978,lng:77.1832}},
+  {id:3, name:"Arjun Singh", phone:"9991122334", autoNo:"DL3CAB4321", seats:3, status:"offline", location:{lat:28.4969,lng:77.1859}},
+];
+  const container=document.getElementById('autosList');
+  const counts=document.getElementById('counts');
+  container.innerHTML='';
+  const online=autos.filter(a=>a.status==='online').length;
+  const offline=autos.length-online;
+  counts.textContent = `Online: ${online} • Offline: ${offline}`;
+
+  autos.forEach(auto=>{
+    // card
+    const div=document.createElement('div');
+    div.className="p-3 border rounded-lg flex justify-between items-center "+(auto.status==="online"?"bg-green-50":"bg-gray-100 opacity-70");
+    div.innerHTML=`
+      <div>
+        <div class="font-medium">${auto.name} <span class="text-xs">(${auto.autoNo})</span></div>
+        <div class="text-xs text-gray-600"><i class="fas fa-phone"></i> <a class="hover:underline" href="tel:${auto.phone}">${auto.phone}</a></div>
+        <div class="text-xs"><i class="fas fa-chair"></i> Seats: ${auto.seats} | 
+          <span class="${auto.status==='online'?'text-green-600':'text-gray-500'}">
+            <i class="fas fa-circle"></i> ${auto.status}
+          </span>
+        </div>
+        <div class="text-xs mt-1">
+          <a href="https://www.google.com/maps?q=${auto.location.lat},${auto.location.lng}" target="_blank" class="text-blue-600 hover:underline">
+            <i class="fas fa-map-marker-alt"></i> View location
+          </a>
+        </div>
+      </div>
+      <div class="space-x-2">
+        <button ${activeRide?'disabled':''} ${auto.status==="online" && !activeRide ? '' : 'disabled'}
+          onclick="bookRide(${auto.id})"
+          class="px-3 py-1 rounded text-xs font-semibold
+                 ${activeRide?'bg-gray-300 text-gray-600':'bg-green-600 text-white hover:bg-green-700'}">
+          <i class="fas fa-check"></i> Book
+        </button>
+      </div>`;
+    container.appendChild(div);
+
+    // map marker
+    if(!auto.marker){
+      auto.marker = new google.maps.Marker({
+        position:auto.location,
+        map,
+        title:`${auto.name} (${auto.autoNo})`,
+        icon:{ url:'https://cdn-icons-png.flaticon.com/512/3448/3448339.png',
+               scaledSize:new google.maps.Size(36,36) }
+      });
+    } else {
+      auto.marker.setPosition(auto.location);
+    }
+  });
+}
+
+/* -------------------- PICKUP/DROP UI -------------------- */
+function updateSelection(){
+  const pickupVal=document.getElementById('pickupSelect').value;
+  const dropVal=document.getElementById('dropSelect').value;
+
+  pickupMarker?.setMap(null);
+  dropMarker?.setMap(null);
+  routeLine?.setMap(null);
+
+  if(pickupVal){
+    pickupMarker=new google.maps.Marker({
+      position:LOCATIONS[pickupVal], map,
+      icon:{path:google.maps.SymbolPath.CIRCLE,scale:8,fillColor:'#10b981',fillOpacity:1,strokeWeight:0},
+    });
+    document.getElementById('pickupLabel').textContent=LOCATIONS[pickupVal].label;
+  } else {
+    document.getElementById('pickupLabel').textContent='Not set';
+  }
+  if(dropVal){
+    dropMarker=new google.maps.Marker({
+      position:LOCATIONS[dropVal], map,
+      icon:{path:google.maps.SymbolPath.CIRCLE,scale:8,fillColor:'#3b82f6',fillOpacity:1,strokeWeight:0},
+    });
+    document.getElementById('dropLabel').textContent=LOCATIONS[dropVal].label;
+  } else {
+    document.getElementById('dropLabel').textContent='Not set';
+  }
+
+  if(pickupVal && dropVal && pickupVal!==dropVal){
+    routeLine=new google.maps.Polyline({
+      path:[LOCATIONS[pickupVal], LOCATIONS[dropVal]],
+      geodesic:true, strokeColor:"#4F46E5", strokeOpacity:0.9, strokeWeight:4, map:map
+    });
+    map.fitBounds(new google.maps.LatLngBounds(LOCATIONS[pickupVal], LOCATIONS[dropVal]));
+  }
+}
+document.getElementById('pickupSelect').addEventListener('change', updateSelection);
+document.getElementById('dropSelect').addEventListener('change', updateSelection);
+
+document.getElementById('clearBtn').addEventListener('click', ()=>{
+  document.getElementById('pickupSelect').value="";
+  document.getElementById('dropSelect').value="";
+  pickupMarker?.setMap(null); dropMarker?.setMap(null); routeLine?.setMap(null);
+  document.getElementById('pickupLabel').textContent='Not set';
+  document.getElementById('dropLabel').textContent='Not set';
+});
+
+/* -------------------- ONE-AT-A-TIME RULE -------------------- */
+// Guide users to pick an auto from list; also block if a ride is active
+document.getElementById('requestBtn').addEventListener('click', ()=>{
+  if(activeRide){ alert('You already have an active ride. Cancel or wait to complete.'); return; }
+  addNotification('Select an available auto from the list below to confirm your booking.');
+});
+
+/* -------------------- BOOK / CANCEL / RIDE STATE -------------------- */
+function bookRide(autoId){
+  if(activeRide){ addNotification('You already have an active ride. Cancel or wait to complete.'); return; }
+  const name=document.getElementById('userName').value||'Guest';
+  const pickupVal=document.getElementById('pickupSelect').value;
+  const dropVal=document.getElementById('dropSelect').value;
+  if(!pickupVal || !dropVal){ alert('Select pickup & destination first'); return; }
+  if(pickupVal===dropVal){ alert('Pickup and destination cannot be same'); return; }
+
+  const auto = autos.find(a=>a.id===autoId);
+  if(!auto || auto.status!=='online'){ addNotification('Selected auto is not available.'); return; }
+
+  const otp = Math.floor(1000 + Math.random()*9000);
+  const etaMin = estimateMinutes(auto.location, LOCATIONS[pickupVal]); // to pickup
+  activeRide = {
+    id: Date.now(),
+    user: name,
+    autoId: auto.id,
+    autoRef: auto,
+    pickupKey: pickupVal,
+    dropKey: dropVal,
+    pickup: LOCATIONS[pickupVal],
+    drop: LOCATIONS[dropVal],
+    otp,
+    phase: 'to_pickup',           // to_pickup -> to_drop -> completed
+    eta: etaMin,
+    createdAt: Date.now()
+  };
+
+  addNotification(`Ride booked with ${auto.name}. OTP: ${otp}. ETA to pickup: ${etaMin} min`);
+  updateRides();
+  renderAutos(); // refresh buttons disabled
+}
+
+function cancelRide(){
+  if(!activeRide) return;
+  addNotification(`Ride cancelled with ${activeRide.autoRef.name}`);
+  // send auto back to idle (no state change beyond movement stop)
+  activeRide = null;
+  updateRides();
+  renderAutos();
+}
+
+/* -------------------- MOVEMENT SIMULATION -------------------- */
+function startTicker(){
+  if(tickHandle) clearInterval(tickHandle);
+  tickHandle = setInterval(tick, 1000);
+}
+
+function tick(){
+  // idle jitter for online autos not in ride
+  autos.forEach(a=>{
+    const engaged = activeRide && a.id===activeRide.autoId;
+    if(a.status==='online' && !engaged){
+      a.location.lat += (Math.random()-0.5)/20000;
+      a.location.lng += (Math.random()-0.5)/20000;
+      a.marker?.setPosition(a.location);
+    }
+  });
+
+  // move engaged auto
+  if(activeRide){
+    const a = activeRide.autoRef;
+    let target = activeRide.phase==='to_pickup' ? activeRide.pickup : activeRide.drop;
+    moveToward(a.location, target, SPEED_MPS);
+    a.marker?.setPosition(a.location);
+
+    const d = distanceMeters(a.location, target);
+    // update ETA dynamically
+    activeRide.eta = Math.max(1, Math.round((d / SPEED_MPS)/60));
+    updateRidesCardETA();
+
+    if(d < 25){ // reached target
+      if(activeRide.phase==='to_pickup'){
+        activeRide.phase='to_drop';
+        addNotification(`${a.name} has arrived at pickup. Heading to destination.`);
+      }else{
+        // complete ride
+        addNotification(`Trip completed. Thanks for riding with ${a.name}!`);
+        activeRide = null;
+        updateRides();
+        renderAutos();
+      }
+    }
+  }
+}
+
+function moveToward(curr, target, speedMps){
+  const dist = distanceMeters(curr, target);
+  if(dist===0) return;
+  const step = speedMps; // per tick (1s)
+  if(dist <= step){
+    curr.lat = target.lat;
+    curr.lng = target.lng;
+    return;
+  }
+  const frac = step / dist;
+  curr.lat += (target.lat - curr.lat)*frac;
+  curr.lng += (target.lng - curr.lng)*frac;
+}
+
+function distanceMeters(a,b){
+  const R=6371000;
+  const dLat=(b.lat-a.lat)*Math.PI/180;
+  const dLon=(b.lng-a.lng)*Math.PI/180;
+  const lat1=a.lat*Math.PI/180, lat2=b.lat*Math.PI/180;
+  const s = Math.sin(dLat/2)**2 + Math.cos(lat1)*Math.cos(lat2)*Math.sin(dLon/2)**2;
+  return 2*R*Math.atan2(Math.sqrt(s), Math.sqrt(1-s));
+}
+function estimateMinutes(from,to){
+  const m = Math.round((distanceMeters(from,to)/SPEED_MPS)/60);
+  return Math.max(1, m);
+}
+
+/* -------------------- UI HELPERS -------------------- */
+function addNotification(msg){
+  const container=document.getElementById('notifications'); 
+  const div=document.createElement('div');
+  div.className='bg-green-50 border-l-4 border-green-500 p-2 text-sm rounded shadow notif-enter';
+  div.innerHTML = `<i class="fas fa-bell mr-2"></i>${msg} <span class="text-xs text-gray-400 ml-2">• ${new Date().toLocaleTimeString()}</span>`;
+  container.prepend(div);
+  setTimeout(()=>div.remove(),8000);
+}
+
+function updateRides(){
+  const container=document.getElementById('ridesList');
+  container.innerHTML='';
+  if(!activeRide){
+    const empty=document.createElement('div');
+    empty.className='text-gray-500 text-sm';
+    empty.textContent='No active rides.';
+    container.appendChild(empty);
+    return;
+  }
+  const r=activeRide;
+  const div=document.createElement('div');
+  div.className="p-3 border rounded mb-2 bg-white";
+  div.innerHTML=`
+    <div class="flex items-start justify-between">
+      <div>
+        <div><b>${r.user}</b> with <b>${r.autoRef.name}</b> (${r.autoRef.autoNo})</div>
+        <div class="text-xs text-gray-600 mt-1">
+          <i class="fas fa-map-pin"></i> ${r.pickup.label} → ${r.drop.label}
+        </div>
+        <div class="text-xs mt-1">
+          <span class="${r.phase==='to_pickup'?'text-amber-600':'text-green-600'} font-medium">
+            ${r.phase==='to_pickup'?'On the way to pickup':'On the way to destination'}
+          </span>
+        </div>
+        <div class="text-xs mt-1">
+          <i class="fas fa-key mr-1"></i> OTP: <b>${r.otp}</b>
+          <span id="etaSpan" class="ml-3"><i class="far fa-clock"></i> ETA: ${r.eta} min</span>
+        </div>
+        <div class="text-xs mt-1">
+          <a class="text-blue-600 hover:underline" target="_blank"
+             href="https://www.google.com/maps?q=${r.autoRef.location.lat},${r.autoRef.location.lng}">
+            <i class="fas fa-location-arrow"></i> Driver live location
+          </a>
+          <span class="mx-2">•</span>
+          <a class="text-blue-600 hover:underline" href="tel:${r.autoRef.phone}">
+            <i class="fas fa-phone"></i> Call driver
+          </a>
+        </div>
+      </div>
+      <div>
+        <button onclick="cancelRide()" class="bg-red-500 text-white px-3 py-1 rounded text-xs hover:bg-red-600">
+          <i class="fas fa-times"></i> Cancel
+        </button>
+      </div>
+    </div>`;
+  container.appendChild(div);
+}
+
+function updateRidesCardETA(){
+  if(!activeRide) return;
+  const etaSpan=document.getElementById('etaSpan');
+  if(etaSpan) etaSpan.innerHTML = `<i class="far fa-clock"></i> ETA: ${activeRide.eta} min`;
+}
+</script>
+</body>
+</html>
